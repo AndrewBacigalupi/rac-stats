@@ -120,20 +120,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "RAW STATS!A:D",
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [[name, stat, timestamp, count]],
-      },
-    });
+    // Extract date from timestamp (assuming timestamp is in format like "2025-09-28T10:30:00")
+    const date = new Date(timestamp);
+    const dateString = date.toLocaleDateString('en-US', { 
+      month: 'numeric', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }); // Format: "9/28/2025"
+    
+    console.log(`Processing stat for date: ${dateString}`);
 
-    console.log("Successfully added to sheet:", result.data);
+    // Check if sheet exists for this date
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const existingSheets = spreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
+    
+    let sheetName = dateString;
+    let sheetExists = existingSheets.includes(sheetName);
+
+    // Create new sheet if it doesn't exist
+    if (!sheetExists) {
+      console.log(`Creating new sheet: ${sheetName}`);
+      
+      const createSheetRequest = {
+        spreadsheetId,
+        resource: {
+          requests: [{
+            addSheet: {
+              properties: {
+                title: sheetName,
+                gridProperties: {
+                  rowCount: 100,
+                  columnCount: 20
+                }
+              }
+            }
+          }]
+        }
+      };
+
+      await sheets.spreadsheets.batchUpdate(createSheetRequest);
+      
+      // Set up the sheet with headers and formulas
+      await setupNewSheetWithFormulas(sheets, spreadsheetId, sheetName);
+      
+      console.log(`Successfully created and configured sheet: ${sheetName}`);
+    }
+
+    // Add the stat to the appropriate sheet (both the date-specific sheet and RAW STATS)
+    const promises = [
+      // Add to date-specific sheet
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${sheetName}!A:D`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[name, stat, timestamp, count]],
+        },
+      }),
+      // Also add to RAW STATS for cumulative tracking
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "RAW STATS!A:D",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[name, stat, timestamp, count]],
+        },
+      })
+    ];
+
+    const results = await Promise.all(promises);
+
+    console.log("Successfully added to sheets:", results.map(r => r.data));
     return NextResponse.json({ 
       success: true, 
       message: "Stat added successfully",
-      data: result.data 
+      dateSheet: sheetName,
+      data: results[0].data 
     });
 
   } catch (error) {
@@ -146,4 +208,66 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to set up a new sheet with formulas
+async function setupNewSheetWithFormulas(sheets: any, spreadsheetId: string, sheetName: string) {
+  const formulas = [
+    // Headers
+    ["Player", "Stat", "Timestamp", "Count", "Notes"],
+    // Sample formulas for calculations (these will be in row 2)
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    ["", "", "", "", ""],
+    // Summary row with formulas
+    ["TOTALS", "", "", "=SUM(D2:D100)", ""],
+    ["AVERAGE", "", "", "=AVERAGE(D2:D100)", ""],
+    ["COUNT", "", "", "=COUNT(D2:D100)", ""],
+    ["", "", "", "", ""],
+    // Player-specific totals (you can expand this)
+    ["PLAYER TOTALS", "", "", "", ""],
+    ["", "", "", "", ""],
+  ];
+
+  // Add the initial data with formulas
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${sheetName}!A1:E${formulas.length}`,
+    valueInputOption: "USER_ENTERED", // This allows formulas to be interpreted
+    requestBody: {
+      values: formulas,
+    },
+  });
+
+  // Format the header row
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    resource: {
+      requests: [{
+        repeatCell: {
+          range: {
+            sheetId: await getSheetId(sheets, spreadsheetId, sheetName),
+            startRowIndex: 0,
+            endRowIndex: 1,
+            startColumnIndex: 0,
+            endColumnIndex: 5
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: { red: 0.2, green: 0.4, blue: 0.8 },
+              textFormat: { foregroundColor: { red: 1, green: 1, blue: 1 }, bold: true }
+            }
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)"
+        }
+      }]
+    }
+  });
+}
+
+// Helper function to get sheet ID by name
+async function getSheetId(sheets: any, spreadsheetId: string, sheetName: string): Promise<number> {
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+  const sheet = spreadsheet.data.sheets?.find((s: any) => s.properties?.title === sheetName);
+  return sheet?.properties?.sheetId || 0;
 }

@@ -6,6 +6,8 @@ import Link from "next/link"
 
 export default function StatEntryPage() {
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+    const [players, setPlayers] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState<{
         message: string;
         type: "success" | "error";
@@ -16,33 +18,36 @@ export default function StatEntryPage() {
         isVisible: false,
     });
 
-    const players = [
-        "LIU", "SID", "MORAKIS", "DYLAN", "IAN", "LIAM", "JON", "ZION",
-        "LUKAS", "GRIFF", "RICKY", "SCOTT", "DEACON", "EVAN", "ISAAC", "ROBBIE", "BERNIE"
-    ];
+    useEffect(() => {
+      async function fetchPlayers() {
+        try {
+          const res = await fetch("/api/loadPlayers");
+          const data: string[] = await res.json();
+          setPlayers(data);
+        } catch (err) {
+          console.error("Failed to load players", err);
+          setToast({
+            message: "Failed to load players. Please refresh the page.",
+            type: "error",
+            isVisible: true,
+          });
+        } finally {
+          setLoading(false);
+        }
+      }
 
-    // const [players, setPlayers] = useState<string[]>([]);
-    // const [loading, setLoading] = useState(true);
+      fetchPlayers();
+    }, []);
 
-    // useEffect(() => {
-    //   async function fetchPlayers() {
-    //     try {
-    //       const res = await fetch("/api/loadPlayers"); // API route you wrote
-    //       const data: string[] = await res.json();
-    //       setPlayers(data);
-    //     } catch (err) {
-    //       console.error("Failed to load players", err);
-    //     } finally {
-    //       setLoading(false);
-    //     }
-    //   }
-
-    //   fetchPlayers();
-    // }, []);
-
-    // if (loading) {
-    //   return <p>Loading players...</p>;
-    // }
+    if (loading) {
+      return (
+        <div className="min-h-screen py-8 flex items-center justify-center" style={{backgroundColor: '#483C32'}}>
+          <div className="text-center">
+            <p className="text-xl" style={{color: '#91D2FD'}}>Loading players...</p>
+          </div>
+        </div>
+      );
+    }
 
     const stats = ["3PMAKE", "3PMISS", "OREB", "DREB", "ASSIST", "TO"];
 
@@ -55,7 +60,12 @@ export default function StatEntryPage() {
     };
 
     
-    const addStatEntry = async (playerName: string, statType: string) => {
+    const addStatEntry = async (playerDisplayName: string, statType: string) => {
+        // Extract just the player name (remove ": NUMBER" part)
+        const playerName = playerDisplayName.includes(': ') 
+            ? playerDisplayName.split(': ')[0] 
+            : playerDisplayName;
+            
         const now = new Date();
         const timestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
         
@@ -85,7 +95,7 @@ export default function StatEntryPage() {
             console.log("Response data:", result);
             
             if (response.ok) {
-                showToast(`${playerName} ${statType} recorded`, "success");
+                showToast(`${playerDisplayName} ${statType} recorded`, "success");
             } else {
                 console.error("Failed to add stat:", result.error);
                 showToast(`Failed to add stat: ${result.error}`, "error");
@@ -131,7 +141,7 @@ export default function StatEntryPage() {
                <Button
                  key={index}
                  onClick={() => setSelectedPlayer(name)}
-                 className="group py-6 px-8 text-2xl h-24 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 border"
+                 className="group py-6 px-8 text-lg sm:text-2xl h-24 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 border"
                  style={{backgroundColor: '#91D2FD', color: '#483C32'}}
                  
                >

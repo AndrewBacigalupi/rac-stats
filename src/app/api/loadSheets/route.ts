@@ -19,7 +19,11 @@ export async function GET() {
       title: sheet.properties?.title,
       sheetId: sheet.properties?.sheetId,
     }))
-    .filter(sheet => sheet.title !== "RAW STAT ENTRIES" && sheet.title !== "Roster") || [];
+    .filter(sheet => 
+      sheet.title !== "RAW STAT ENTRIES" && 
+      sheet.title !== "Roster" &&
+      sheet.title !== "RAW STATS" // Exclude the raw stats sheet from the practice sheets list
+    ) || [];
 
     return NextResponse.json(sheetTitles);
   } catch (error) {
