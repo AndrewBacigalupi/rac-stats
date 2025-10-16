@@ -22,7 +22,7 @@ export async function GET() {
     .filter(sheet => 
       sheet.title !== "RAW STAT ENTRIES" && 
       sheet.title !== "Roster" &&
-      sheet.title !== "RAW STATS" // Exclude the raw stats sheet from the practice sheets list
+      sheet.title !== "9/27/2025" // Exclude the raw stats sheet from the practice sheets list
     ) || [];
 
     return NextResponse.json(sheetTitles);
