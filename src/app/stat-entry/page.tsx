@@ -8,6 +8,21 @@ export default function StatEntryPage() {
     const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
     const [players, setPlayers] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [attendanceTaken, setAttendanceTaken] = useState(false);
+    const [attendanceLoading, setAttendanceLoading] = useState(true);
+    const [attendanceInfo, setAttendanceInfo] = useState<{
+      today: string;
+      message: string;
+    } | null>(null);
+    const [lastStatEntry, setLastStatEntry] = useState<{
+      player: string;
+      stat: string;
+      timestamp: string;
+      count: string;
+      notes: string;
+    } | null>(null);
+    const [showUndoModal, setShowUndoModal] = useState(false);
+    const [undoLoading, setUndoLoading] = useState(false);
     const [toast, setToast] = useState<{
         message: string;
         type: "success" | "error";
@@ -36,14 +51,40 @@ export default function StatEntryPage() {
         }
       }
 
+      async function checkAttendance() {
+        try {
+          const res = await fetch("/api/attendance-check");
+          const data = await res.json();
+          setAttendanceTaken(data.attendanceTaken);
+        } catch (err) {
+          console.error("Failed to check attendance", err);
+        } finally {
+          setAttendanceLoading(false);
+        }
+      }
+
+      async function fetchLastStatEntry() {
+        try {
+          const res = await fetch("/api/last-stat");
+          const data = await res.json();
+          if (data.hasLastEntry) {
+            setLastStatEntry(data.lastEntry);
+          }
+        } catch (err) {
+          console.error("Failed to fetch last stat entry", err);
+        }
+      }
+
       fetchPlayers();
+      checkAttendance();
+      fetchLastStatEntry();
     }, []);
 
     if (loading) {
       return (
-        <div className="min-h-screen py-8 flex items-center justify-center" style={{backgroundColor: '#483C32'}}>
+        <div className="min-h-screen py-8 flex items-center justify-center" style={{backgroundColor: '#000000'}}>
           <div className="text-center">
-            <p className="text-xl font-bold " style={{color: '#91D2FD'}}>Loading players...</p>
+            <p className="text-xl font-bold " style={{color: '#ffffff'}}>Loading players...</p>
           </div>
         </div>
       );
@@ -96,6 +137,19 @@ export default function StatEntryPage() {
             
             if (response.ok) {
                 showToast(`${playerDisplayName} ${statType} recorded`, "success");
+                
+                // Refresh the last stat entry after adding a new one
+                setTimeout(async () => {
+                  try {
+                    const res = await fetch("/api/last-stat");
+                    const data = await res.json();
+                    if (data.hasLastEntry) {
+                      setLastStatEntry(data.lastEntry);
+                    }
+                  } catch (err) {
+                    console.error("Failed to refresh last stat entry", err);
+                  }
+                }, 1000);
             } else {
                 console.error("Failed to add stat:", result.error);
                 showToast(`Failed to add stat: ${result.error}`, "error");
@@ -108,59 +162,152 @@ export default function StatEntryPage() {
         
         setSelectedPlayer(null);
     };
+
+    const handleUndoClick = async () => {
+        setShowUndoModal(true);
+    };
+
+    const handleUndoConfirm = async () => {
+        setUndoLoading(true);
+        try {
+            const response = await fetch('/api/delete-last-stat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                showToast(`Undone: ${data.deletedEntry.player} - ${data.deletedEntry.stat}`, "success");
+                setLastStatEntry(null);
+                setShowUndoModal(false);
+            } else {
+                const error = await response.json();
+                showToast(`Failed to undo: ${error.error}`, "error");
+            }
+        } catch (error) {
+            console.error("Error undoing last stat:", error);
+            showToast("Error undoing last stat entry", "error");
+        } finally {
+            setUndoLoading(false);
+        }
+    };
+
+    const handleUndoCancel = () => {
+        setShowUndoModal(false);
+    };
     
     return (
-       <div className="min-h-screen py-8" style={{backgroundColor: '#483C32'}}>
-         
+       <div className="min-h-screen py-8" style={{ backgroundColor: "#000000" }}>
          <Link href="/dashboard">
-           <Button className="font text-lg px-6 py-3 m-4 ml-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border" style={{backgroundColor: '#91D2FD', color: '#483C32'}}>
-             ← Back
+           <Button
+             className="font text-lg px-6 py-3 m-4 ml-8 rounded-xl shadow-lg hover:shadow-xl hover:opacity-80 transition-all duration-300 border"
+             style={{ backgroundColor: "#ffffff", color: "#000000" }}
+           >
+             Back
            </Button>
          </Link>
-         
-         <div className="w-[70%] mx-auto px-4">
-           <div className="text-center mb-12">
-             <div className="flex items-center flex-col justify-center gap-6 ">
-               <img 
-                 src="/jumbos.png" 
-                 alt="Tufts Jumbos Logo" 
-                 className="h-16 w-auto opacity-90"
-                 onError={(e) => {
-                   // Fallback if logo doesn't exist
-                   e.currentTarget.style.display = 'none';
-                 }}
-               />
-               <h1 className="md:text-5xl font-bold text-3xl " style={{color: '#91D2FD'}}>
+
+        <div className="w-[70%] mx-auto px-4">
+          <div className="text-center mb-12">
+            <div className="flex items-center flex-col justify-center gap-6 ">
+              <img
+                src="/jumbos.png"
+                alt="Tufts Jumbos Logo"
+                className="h-16 w-auto opacity-90"
+                onError={(e) => {
+                  // Fallback if logo doesn't exist
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+               <h1
+                 className="md:text-5xl font-bold text-3xl "
+                 style={{ color: "#ffffff" }}
+               >
                  Tufts Men's Basketball
                </h1>
-             </div>
-           </div>
+            </div>
 
-           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-             {players.map((name, index) => (
-               <Button
-                 key={index}
-                 onClick={() => setSelectedPlayer(name)}
-                 className="group py-6 px-8 text-lg sm:text-2xl h-24 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 border"
-                 style={{backgroundColor: '#91D2FD', color: '#483C32'}}
-                 
+            {/* Attendance Button */}
+            <div className="mt-8 mb-8">
+              {attendanceTaken || attendanceLoading ? (
+                <Button
+                  disabled={true}
+                  className="rounded-xl border border-solid border-transparent transition-all duration-300 flex items-center justify-center gap-2 font-medium text-lg h-16 px-8 shadow-lg mx-auto opacity-50 cursor-not-allowed"
+                   style={{
+                     backgroundColor: "#ffffff",
+                     color: "#000000",
+                   }}
+                >
+                  {attendanceLoading ? "Loading..." : "Attendance Completed"}
+                </Button>
+              ) : (
+                <Link href="/attendance" passHref>
+                  <Button
+                    className="rounded-xl border border-solid border-transparent transition-all duration-300 flex items-center justify-center gap-2 font-medium text-lg h-16 px-8 shadow-lg mx-auto hover:opacity-80"
+                     style={{
+                       backgroundColor: "#ffffff",
+                       color: "#000000",
+                     }}
+                  >
+                    Take Attendance
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {/* Undo Last Entry Button */}
+            {lastStatEntry && (
+              <div className="mt-4 mb-8">
+                 <Button
+                   onClick={handleUndoClick}
+                   className="rounded-xl border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg mx-auto hover:opacity-80"
+                   style={{
+                     backgroundColor: "transparent",
+                     color: "#ffffff",
+                     borderColor: "red",
+                   }}
+                 >
+                   Undo Last Entry: {lastStatEntry.player} - {lastStatEntry.stat}
+                 </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+            {players.map((name, index) => (
+              <Button
+                key={index}
+                onClick={() => setSelectedPlayer(name)}
+                className="group py-6 px-8 text-lg sm:text-2xl h-24 font-bold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:opacity-80 border"
+                 style={{ backgroundColor: "#ffffff", color: "#000000", borderColor:"gray" }}
+              >
+                <span className="transition-transform duration-200">
+                  {name}
+                </span>
+              </Button>
+            ))}
+          </div>
+
+           {selectedPlayer && (
+             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 animate-in fade-in duration-300">
+               <div
+                 className="rounded-3xl shadow-2xl p-10 max-w-lg w-full mx-4 border animate-in zoom-in-95 duration-300"
+                 style={{ backgroundColor: "#ffffff" }}
                >
-                 <span className="group-hover:scale-105 transition-transform duration-200">
-                   {name}
-                 </span>
-               </Button>
-             ))}
-           </div>
-
-          {selectedPlayer && (
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-40 animate-in fade-in duration-300">
-              <div className="rounded-3xl shadow-2xl p-10 max-w-lg w-full mx-4 border animate-in zoom-in-95 duration-300" style={{backgroundColor: '#91D2FD'}}>
                 <div className="text-center">
                   <div className="mb-8">
-                    <h2 className="text-3xl font-bold mb-2" style={{color: '#483C32'}}>
+                    <h2
+                      className="text-3xl font-bold mb-2"
+                      style={{ color: "#000000" }}
+                    >
                       Select Stat for
                     </h2>
-                    <div className="inline-block px-6 py-2 rounded-2xl text-xl font-bold shadow-lg" style={{backgroundColor: '#483C32', color: '#91D2FD'}}>
+                    <div
+                      className="inline-block px-6 py-2 rounded-2xl text-xl font-bold shadow-lg"
+                      style={{ backgroundColor: "#000000", color: "#ffffff" }}
+                    >
                       {selectedPlayer}
                     </div>
                   </div>
@@ -170,10 +317,10 @@ export default function StatEntryPage() {
                       <Button
                         key={stat}
                         onClick={() => addStatEntry(selectedPlayer, stat)}
-                        className="group py-4 px-6 text-lg h-18 font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 border"
-                        style={{backgroundColor: '#483C32', color: '#91D2FD'}}
+                        className="group py-4 px-6 text-lg h-18 font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:opacity-80 border"
+                        style={{ backgroundColor: "#000000", color: "#ffffff" }}
                       >
-                        <span className="group-hover:scale-105 transition-transform duration-200">
+                        <span className="transition-transform duration-200">
                           {stat}
                         </span>
                       </Button>
@@ -183,12 +330,14 @@ export default function StatEntryPage() {
                   <Button
                     onClick={() => setSelectedPlayer(null)}
                     variant="outline"
-                    className="w-full py-3 border-2 rounded-xl font-medium transition-all duration-300 hover:scale-105"
-                    style={{color: '#483C32', borderColor: '#483C32', backgroundColor: 'transparent'}}
-                    onMouseEnter={(e) => {
+                    className="w-full py-3 border-2 rounded-xl font-medium transition-all duration-300 hover:opacity-80"
+                    style={{
+                      color: "#483C32",
+                      borderColor: "#483C32",
+                      backgroundColor: "transparent",
                     }}
-                    onMouseLeave={(e) => {
-                    }}
+                    onMouseEnter={(e) => {}}
+                    onMouseLeave={(e) => {}}
                   >
                     Cancel
                   </Button>
@@ -197,6 +346,85 @@ export default function StatEntryPage() {
             </div>
           )}
         </div>
+
+        {/* Undo Confirmation Modal */}
+        {showUndoModal && lastStatEntry && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-300">
+             <div
+               className="rounded-3xl shadow-2xl p-10 max-w-lg w-full mx-4 border animate-in zoom-in-95 duration-300"
+               style={{ backgroundColor: "#ffffff" }}
+             >
+              <div className="text-center">
+                <h2
+                  className="text-3xl font-bold mb-6"
+                   style={{ color: "#000000" }}
+                >
+                  Confirm Undo
+                </h2>
+
+                <div className="mb-8">
+                  <p className="text-lg mb-4" style={{ color: "#483C32" }}>
+                    Are you sure you want to undo the last entry?
+                  </p>
+
+                  <div className="bg-white/20 rounded-xl p-4 mb-4">
+                    <div
+                      className="text-lg font-semibold"
+                      style={{ color: "#000000" }}
+                    >
+                      Player: {lastStatEntry.player}
+                    </div>
+                    <div
+                      className="text-lg font-semibold"
+                      style={{ color: "#000000" }}
+                    >
+                      Stat: {lastStatEntry.stat}
+                    </div>
+                  </div>
+
+                  <p
+                    className="text-sm"
+                    style={{ color: "#483C32", opacity: 0.8 }}
+                  >
+                    This action cannot be undone.
+                  </p>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    onClick={handleUndoCancel}
+                    disabled={undoLoading}
+                    variant="outline"
+                    className="flex-1 py-3 border-2 rounded-xl font-medium transition-all duration-300 hover:opacity-80"
+                    style={{
+                      color: "#483C32",
+                      borderColor: "#483C32",
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    onClick={handleUndoConfirm}
+                    disabled={undoLoading}
+                    className="flex-1 py-3 rounded-xl font-medium transition-all duration-300 hover:opacity-80"
+                     style={{ backgroundColor: "#c91616", color: "#ffffff" }}
+                  >
+                    {undoLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                        Undoing...
+                      </>
+                    ) : (
+                      "Confirm Delete"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Toast
           message={toast.message}

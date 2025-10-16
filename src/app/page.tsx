@@ -46,20 +46,20 @@ export default function Home() {
   };
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20" style={{backgroundColor: '#483C32'}}>
+    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20" style={{backgroundColor: '#000000'}}>
       <main className="flex flex-col gap-8 row-start-2 items-center">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4" style={{color: '#91D2FD'}}>Tufts MBB In-Practice Statistics</h1>
-          <p className="text-lg" style={{color: '#91D2FD', opacity: 0.9}}>Let's make a run!</p>
+          <h1 className="text-5xl font-bold mb-4" style={{color: '#ffffff'}}>Tufts MBB In-Practice Statistics</h1>
+          <p className="text-lg" style={{color: '#ffffff', opacity: 0.9}}>Let's make a run!</p>
         </div>
 
         <div
           className="w-full max-w-sm rounded-2xl p-8 shadow-xl border"
-          style={{ backgroundColor: "#2F241F", borderColor: "#91D2FD40" }}
+          style={{ backgroundColor: "#000000", borderColor: "#ffffff40" }}
         >
           <h2
             className="text-2xl font-bold text-center mb-6"
-            style={{ color: "#91D2FD" }}
+            style={{ color: "#ffffff" }}
           >
             Enter Password
           </h2>
@@ -69,7 +69,7 @@ export default function Home() {
               <label
                 htmlFor="password"
                 className="text-sm font-medium mb-2"
-                style={{ color: "#91D2FD" }}
+                style={{ color: "#ffffff" }}
               >
                 Password
               </label>
@@ -82,9 +82,9 @@ export default function Home() {
                   onChange={(event) => setPassword(event.target.value)}
                   className="w-full px-4 py-2 pr-12 rounded-lg border focus:outline-none focus:ring-2"
                   style={{
-                    backgroundColor: "#3F332C",
-                    borderColor: "#91D2FD40",
-                    color: "#91D2FD",
+                    backgroundColor: "#000000",
+                    borderColor: "#ffffff40",
+                    color: "#ffffff",
                   }}
                   placeholder="Enter password"
                   autoComplete="current-password"
@@ -95,7 +95,7 @@ export default function Home() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
-                  style={{ color: "#91D2FD", opacity: 0.7 }}
+                  style={{ color: "#ffffff", opacity: 0.7 }}
                   disabled={isSubmitting}
                 >
                   {showPassword ? (
@@ -144,7 +144,7 @@ export default function Home() {
             <button
               type="submit"
               className="w-full py-2 rounded-lg font-semibold transition-all duration-300"
-              style={{ backgroundColor: "#91D2FD", color: "#483C32" }}
+              style={{ backgroundColor: "#ffffff", color: "#000000" }}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Checking..." : "Login"}
@@ -152,14 +152,14 @@ export default function Home() {
           </form>
 
           {error && (
-            <p className="mt-4 text-center text-sm" style={{ color: "#FF9F9F" }}>
+            <p className="mt-4 text-center text-sm" style={{ color: "#ff6b6b" }}>
               {error}
             </p>
           )}
 
           <p
             className="mt-6 text-xs text-center"
-            style={{ color: "#91D2FD", opacity: 0.7 }}
+            style={{ color: "#ffffff", opacity: 0.7 }}
           >
             Access the Tufts Men's Basketball statistics system
           </p>
@@ -169,7 +169,7 @@ export default function Home() {
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
         <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4 transition-colors duration-200"
-          style={{color: '#91D2FD'}}
+          style={{color: '#ffffff'}}
           href="https://www.tufts.edu/"
           target="_blank"
           rel="noopener noreferrer"
@@ -178,7 +178,7 @@ export default function Home() {
         </a>
          <a
           className="flex items-center gap-2 hover:underline hover:underline-offset-4 transition-colors duration-200"
-          style={{color: '#91D2FD'}}
+          style={{color: '#ffffff'}}
           href="https://gotuftsjumbos.com/sports/mens-basketball"
           target="_blank"
           rel="noopener noreferrer"

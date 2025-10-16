@@ -3,16 +3,20 @@ import { google } from "googleapis";
 
 export async function GET() {
   try {
-    
+    console.log("=== Testing Google Sheets Connection ===");
     
     // Check environment variables
     const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS;
     const spreadsheetId = process.env.SPREADSHEET_ID;
     
-    
+    console.log("Environment check:");
+    console.log("- SPREADSHEET_ID exists:", !!spreadsheetId);
+    console.log("- SPREADSHEET_ID value:", spreadsheetId ? `${spreadsheetId.substring(0, 10)}...` : "NOT SET");
+    console.log("- CREDENTIALS exist:", !!credentials);
+    console.log("- CREDENTIALS length:", credentials ? credentials.length : 0);
     
     if (!spreadsheetId) {
-      console.error("SPREADSHEET_ID not configured");
+      console.error("❌ SPREADSHEET_ID not configured");
       return NextResponse.json(
         { error: "Spreadsheet ID not configured. Check your .env.local file." },
         { status: 500 }
@@ -20,7 +24,7 @@ export async function GET() {
     }
 
     if (!credentials) {
-      console.error("GOOGLE_SERVICE_ACCOUNT_CREDENTIALS not configured");
+      console.error("❌ GOOGLE_SERVICE_ACCOUNT_CREDENTIALS not configured");
       return NextResponse.json(
         { error: "Google credentials not configured. Check your .env.local file." },
         { status: 500 }
@@ -31,9 +35,11 @@ export async function GET() {
     let parsedCredentials;
     try {
       parsedCredentials = JSON.parse(credentials);
-      
+      console.log("✅ Credentials parsed successfully");
+      console.log("- Project ID:", parsedCredentials.project_id);
+      console.log("- Client Email:", parsedCredentials.client_email);
     } catch (parseError) {
-      console.error("Failed to parse credentials JSON:", parseError);
+      console.error("❌ Failed to parse credentials JSON:", parseError);
       return NextResponse.json(
         { error: "Invalid credentials format. Check your .env.local file." },
         { status: 500 }
@@ -46,10 +52,12 @@ export async function GET() {
       scopes: ["https://www.googleapis.com/auth/spreadsheets"],
     });
 
-    
+    console.log("Creating Sheets client...");
     const sheets = google.sheets({ version: "v4", auth });
 
-    
+    console.log("Attempting to read from sheet...");
+    console.log("- Spreadsheet ID:", spreadsheetId);
+    console.log("- Range: RAW STAT ENTRIES!A1:D5");
 
     // Try to read the first few rows to test connection
     const result = await sheets.spreadsheets.values.get({
@@ -57,7 +65,9 @@ export async function GET() {
       range: "RAW STAT ENTRIES!A1:D5",
     });
 
-    
+    console.log("✅ Successfully read from sheet!");
+    console.log("- Rows found:", result.data.values?.length || 0);
+    console.log("- Data:", result.data.values);
 
     return NextResponse.json({
       success: true,
@@ -67,7 +77,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error("Error testing Google Sheets connection:", error);
+    console.error("❌ Error testing Google Sheets connection:", error);
     console.error("Error details:", {
     });
     
@@ -84,7 +94,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+    console.log("Received request body:", body);
     
     const { name, stat, timestamp, count } = body;
 
@@ -118,7 +128,8 @@ export async function POST(request: NextRequest) {
       year: 'numeric' 
     }); // Format: "9/28/2025"
     
-    
+    console.log(`Processing stat for date: ${dateString}`);
+
     // Check if sheet exists for this date
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
     const existingSheets = spreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
@@ -126,18 +137,27 @@ export async function POST(request: NextRequest) {
     let sheetName = dateString;
     let sheetExists = existingSheets.includes(sheetName);
 
-    // Create new sheet if it doesn't exist
+    // Create new sheet if it doesn't exist by duplicating the template
     if (!sheetExists) {
+      console.log(`Creating new sheet by duplicating template: ${sheetName}`);
       
-
+      // Duplicate the template sheet (this creates and configures the sheet)
       await duplicateTemplateSheet(sheets, spreadsheetId, sheetName);
-
       
+      console.log(`Successfully created and configured sheet: ${sheetName}`);
     }
 
-    // Add the stat to the appropriate sheet (both the date-specific sheet and Cumulative Stats)
+    // Add the stat to both the date-specific sheet and RAW STAT ENTRIES
     const promises = [
       // Add to date-specific sheet
+      sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${sheetName}!A:E`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [[name, stat, timestamp, count, ""]], // Added empty notes column
+        },
+      }),
       // Also add to RAW STAT ENTRIES for cumulative tracking
       sheets.spreadsheets.values.append({
         spreadsheetId,
@@ -151,6 +171,7 @@ export async function POST(request: NextRequest) {
 
     const results = await Promise.all(promises);
 
+    console.log("Successfully added to sheets:", results.map(r => r.data));
     return NextResponse.json({ 
       success: true, 
       message: "Stat added successfully",
@@ -223,9 +244,8 @@ async function duplicateTemplateSheet(sheets: any, spreadsheetId: string, sheetN
     },
   });
 
+  console.log(`Successfully duplicated template sheet and renamed to: ${sheetName}`);
 }
-
-
 // Helper function to get sheet ID by name
 async function getSheetId(sheets: any, spreadsheetId: string, sheetName: string): Promise<number> {
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });

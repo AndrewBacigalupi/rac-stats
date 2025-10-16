@@ -54,17 +54,17 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="min-h-screen py-8" style={{ backgroundColor: '#483C32' }}>
+    <div className="min-h-screen py-8" style={{ backgroundColor: '#000000' }}>
       <Link href="/dashboard">
-        <Button className="font text-lg px-6 py-3 m-4 ml-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border" style={{ backgroundColor: '#91D2FD', color: '#483C32' }}>
-          ← Back
+        <Button className="font text-lg px-6 py-3 m-4 ml-8 rounded-xl shadow-lg hover:shadow-xl hover:opacity-80 transition-all duration-300 border" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+          Back
         </Button>
       </Link>
 
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Leaders Section - Uncommented and with skeleton loading */}
         {/* <div className="text-center mb-12">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-8" style={{ color: '#91D2FD' }}>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-8" style={{ color: '#ffffff' }}>
             Leaders
           </h1>
           <div className="bg-white/10 rounded-2xl p-4 sm:p-6 mb-8 shadow-lg">
@@ -110,8 +110,8 @@ export default function Page() {
           </div>
         </div> */}
 
-        <div className="text-center mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold" style={{ color: '#91D2FD' }}>
+        <div className="text-center mb-16">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold" style={{ color: '#ffffff' }}>
             Practice Sheets
           </h2>
         </div>
@@ -120,7 +120,7 @@ export default function Page() {
           {sheetsLoading ? (
             // Skeleton loading for sheets
             [...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 sm:p-6 bg-white/10 rounded-xl shadow-lg border">
+              <div key={i} className="flex items-center justify-between p-4 sm:p-6 bg-white/20 rounded-xl shadow-lg border">
                 <div className="flex-1">
                   <Skeleton className="h-5 sm:h-6 w-32 sm:w-48 mb-2 bg-white/20" />
                   <Skeleton className="h-4 w-24 sm:w-32 bg-white/10" />
