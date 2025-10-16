@@ -149,15 +149,6 @@ export async function POST(request: NextRequest) {
 
     // Add the stat to both the date-specific sheet and RAW STAT ENTRIES
     const promises = [
-      // Add to date-specific sheet
-      sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: `${sheetName}!A:E`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [[name, stat, timestamp, count, ""]], // Added empty notes column
-        },
-      }),
       // Also add to RAW STAT ENTRIES for cumulative tracking
       sheets.spreadsheets.values.append({
         spreadsheetId,
