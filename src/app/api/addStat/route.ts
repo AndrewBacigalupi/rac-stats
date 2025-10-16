@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { google } from "googleapis";
+
+export async function GET() {
+  try {
+    console.log("=== Testing Google Sheets Connection ===");
+    
+    // Check environment variables
+    const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS;
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+    
+    console.log("Environment check:");
+    console.log("- SPREADSHEET_ID exists:", !!spreadsheetId);
+    console.log("- SPREADSHEET_ID value:", spreadsheetId ? `${spreadsheetId.substring(0, 10)}...` : "NOT SET");
+    console.log("- CREDENTIALS exist:", !!credentials);
+    console.log("- CREDENTIALS length:", credentials ? credentials.length : 0);
+    
+    if (!spreadsheetId) {
+      console.error("❌ SPREADSHEET_ID not configured");
+      return NextResponse.json(
+        { error: "Spreadsheet ID not configured. Check your .env.local file." },
+        { status: 500 }
+      );
+    }
+
+    if (!credentials) {
+      console.error("❌ GOOGLE_SERVICE_ACCOUNT_CREDENTIALS not configured");
+      return NextResponse.json(
+        { error: "Google credentials not configured. Check your .env.local file." },
+        { status: 500 }
+      );
+    }
+
+    // Try to parse credentials
+    let parsedCredentials;
+    try {
+      parsedCredentials = JSON.parse(credentials);
+      console.log("✅ Credentials parsed successfully");
+      console.log("- Project ID:", parsedCredentials.project_id);
+      console.log("- Client Email:", parsedCredentials.client_email);
+    } catch (parseError) {
+      console.error("❌ Failed to parse credentials JSON:", parseError);
+      return NextResponse.json(
+        { error: "Invalid credentials format. Check your .env.local file." },
+        { status: 500 }
+      );
+    }
+
+    console.log("Creating Google Auth...");
+    const auth = new google.auth.GoogleAuth({
+      credentials: parsedCredentials,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+
+    console.log("Creating Sheets client...");
+    const sheets = google.sheets({ version: "v4", auth });
+
+    console.log("Attempting to read from sheet...");
+    console.log("- Spreadsheet ID:", spreadsheetId);
+    console.log("- Range: RAW STATS!A1:D5");
+
+    // Try to read the first few rows to test connection
+    const result = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "RAW STATS!A1:D5",
+    });
+
+    console.log("✅ Successfully read from sheet!");
+    console.log("- Rows found:", result.data.values?.length || 0);
+    console.log("- Data:", result.data.values);
+
+    return NextResponse.json({
+      success: true,
+      message: "Successfully connected to Google Sheets",
+      data: result.data.values || [],
+      rowCount: result.data.values?.length || 0
+    });
+
+  } catch (error) {
+    console.error("❌ Error testing Google Sheets connection:", error);
+    console.error("Error details:", {
+    });
+    
+    return NextResponse.json(
+      { 
+        error: "Failed to connect to Google Sheets", 
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    console.log("Received request body:", body);
+    
+    const { name, stat, timestamp, count } = body;
+
+    if (!name || !stat || !timestamp || count === undefined) {
+      return NextResponse.json(
+        { error: "Missing required fields: name, stat, timestamp, count" },
+        { status: 400 }
+      );
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS || "{}"),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+
+    if (!spreadsheetId) {
+      return NextResponse.json(
+        { error: "Spreadsheet ID not configured" },
+        { status: 500 }
+      );
+    }
+
+    const result = await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: "RAW STATS!A:D",
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[name, stat, timestamp, count]],
+      },
+    });
+
+    console.log("Successfully added to sheet:", result.data);
+    return NextResponse.json({ 
+      success: true, 
+      message: "Stat added successfully",
+      data: result.data 
+    });
+
+  } catch (error) {
+    console.error("Error in API route:", error);
+    return NextResponse.json(
+      { 
+        error: "Internal server error", 
+        details: error instanceof Error ? error.message : "Unknown error" 
+      },
+      { status: 500 }
+    );
+  }
+}
