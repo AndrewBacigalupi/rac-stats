@@ -23,14 +23,14 @@ export async function GET() {
     } catch (error) {
       // Fallback to Cumulative Stats sheet for names only
       try {
-        range = "Cumulative Stats!D:D";
+        range = "RAW STAT ENTRIES!D:D";
         response = await sheets.spreadsheets.values.get({
           spreadsheetId,
           range,
         });
       } catch (error2) {
         // Final fallback to RAW Stats sheet
-        range = "RAW Stats!D:D";
+        range = "RAW STAT ENTRIES!D:D";
         response = await sheets.spreadsheets.values.get({
           spreadsheetId,
           range,
