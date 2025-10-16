@@ -43,7 +43,7 @@ export default function StatEntryPage() {
       return (
         <div className="min-h-screen py-8 flex items-center justify-center" style={{backgroundColor: '#483C32'}}>
           <div className="text-center">
-            <p className="text-xl" style={{color: '#91D2FD'}}>Loading players...</p>
+            <p className="text-xl font-bold " style={{color: '#91D2FD'}}>Loading players...</p>
           </div>
         </div>
       );
