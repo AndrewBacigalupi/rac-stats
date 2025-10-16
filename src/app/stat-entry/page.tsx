@@ -259,10 +259,10 @@ export default function StatEntryPage() {
 
             {/* Undo Last Entry Button */}
             {lastStatEntry && (
-              <div className="mt-4 mb-8">
+              <div className="mt-4 mb-8 flex justify-center">
                  <Button
                    onClick={handleUndoClick}
-                   className="rounded-xl border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg mx-auto hover:opacity-80"
+                   className="rounded-xl border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg hover:opacity-80"
                    style={{
                      backgroundColor: "transparent",
                      color: "#ffffff",

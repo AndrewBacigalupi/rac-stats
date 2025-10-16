@@ -9,7 +9,10 @@ export default function Dashboard() {
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20" style={{backgroundColor: '#000000'}}>
       <main className="flex flex-col gap-8 row-start-2 items-center">
         <div className="text-center">
-          <h1 className="text-5xl font-bold mb-4" style={{color: '#ffffff'}}>Tufts MBB In-Practice Statistics</h1>
+          <h1 className="text-5xl font-bold mb-4" style={{color: '#ffffff'}}>
+            <span className="block sm:inline">Tufts MBB</span>
+            <span className="block sm:inline sm:ml-2">In-Practice Statistics</span>
+          </h1>
           <p className="text-lg" style={{color: '#ffffff', opacity: 0.8}}>Let's make a run!</p>
         </div>
 
@@ -39,10 +42,13 @@ export default function Dashboard() {
         <div className="mt-8 h-auto flex gap-4 whitespace-normal items-center justify-center flex-col sm:flex-row">
           <Link href="/manager-docs" passHref>
             <Button
-              className="rounded-xl max-w-[90vw] sm:max-w-none border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg hover:shadow-xl hover:opacity-80"
+              className="rounded-xl max-w-[90vw] sm:max-w-none border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-auto py-3 px-6 shadow-lg hover:shadow-xl hover:opacity-80 text-center leading-tight"
               style={{backgroundColor: 'transparent', color: '#ffffff', borderColor: '#2f9ffa'}}
             >
-              MANAGERS: PLEASE READ BEFORE TRACKING STATS
+              <span className="block sm:inline">
+                <span className="block sm:inline">MANAGERS/COACHES:</span>
+                <span className="block sm:inline sm:ml-1">PLEASE READ BEFORE TRACKING STATS</span>
+              </span>
             </Button>
           </Link>
         </div>
