@@ -36,10 +36,10 @@ export default function Dashboard() {
         </div>
 
         {/* Additional Features */}
-        <div className="mt-8 flex gap-4 items-center justify-center flex-col sm:flex-row">
+        <div className="mt-8 h-auto flex gap-4 whitespace-normal items-center justify-center flex-col sm:flex-row">
           <Link href="/manager-docs" passHref>
             <Button
-              className="rounded-xl border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg hover:shadow-xl hover:opacity-80"
+              className="rounded-xl max-w-[90vw] sm:max-w-none border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-10 px-6 shadow-lg hover:shadow-xl hover:opacity-80"
               style={{backgroundColor: 'transparent', color: '#ffffff', borderColor: '#2f9ffa'}}
             >
               MANAGERS: PLEASE READ BEFORE TRACKING STATS
