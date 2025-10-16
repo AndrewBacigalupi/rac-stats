@@ -73,11 +73,12 @@ export default function AttendancePage() {
     setMessage({ text: "", type: "" });
 
     try {
-      const today = new Date().toLocaleDateString('en-US', {
+      const today = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
         month: 'numeric',
         day: 'numeric',
         year: 'numeric'
-      });
+      }).format(new Date());
 
       const attendanceData = Object.entries(attendance).map(([playerDisplayName, present]) => {
         const playerName = playerDisplayName.split(': ')[0];
@@ -182,12 +183,13 @@ export default function AttendancePage() {
             Practice Attendance
           </h1>
           <p className="text-lg" style={{ color: '#ffffff', opacity: 0.8 }}>
-            {new Date().toLocaleDateString('en-US', { 
+            {new Intl.DateTimeFormat('en-US', { 
+              timeZone: 'America/New_York',
               weekday: 'long', 
               year: 'numeric', 
               month: 'long', 
               day: 'numeric' 
-            })}
+            }).format(new Date())}
           </p>
           <div className="mt-4 text-sm" style={{ color: '#ffffff', opacity: 0.7 }}>
             Present: {presentCount} / {totalCount} players

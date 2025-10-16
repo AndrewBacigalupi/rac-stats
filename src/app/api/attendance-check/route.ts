@@ -18,21 +18,24 @@ export async function GET() {
       );
     }
 
-    // Get today's date in the same format used by attendance
-    const today = new Date().toLocaleDateString('en-US', {
+    // Get today's date in EST/EDT timezone (consistent with attendance recording)
+    const now = new Date();
+    const today = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
       month: 'numeric',
       day: 'numeric',
       year: 'numeric'
-    });
+    }).format(now);
 
     // Get yesterday's date for comparison
-    const yesterday = new Date();
+    const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayFormatted = yesterday.toLocaleDateString('en-US', {
+    const yesterdayFormatted = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
       month: 'numeric',
       day: 'numeric',
       year: 'numeric'
-    });
+    }).format(yesterday);
 
     // Get attendance data
     const response = await sheets.spreadsheets.values.get({
