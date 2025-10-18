@@ -131,45 +131,82 @@ export async function POST(request: NextRequest) {
     }); // Format: "1/1/2025"
     
     console.log(`Processing stat for date: ${dateString}`);
+    console.log(`Original timestamp received: "${timestamp}"`);
+    console.log(`Timestamp type: ${typeof timestamp}`);
 
-    // Check if sheet exists for this date
-    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const existingSheets = spreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
-    
+    // Check if sheet exists for this date with retry logic for race conditions
     let sheetName = dateString;
-    let sheetExists = existingSheets.includes(sheetName);
+    let sheetExists = false;
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    // Create new sheet if it doesn't exist by duplicating the template
-    if (!sheetExists) {
-      console.log(`Creating new sheet by duplicating template: ${sheetName}`);
-      
-      // Duplicate the template sheet (this creates and configures the sheet)
-      await duplicateTemplateSheet(sheets, spreadsheetId, sheetName);
-      
-      console.log(`Successfully created and configured sheet: ${sheetName}`);
+    while (!sheetExists && attempts < maxAttempts) {
+      try {
+        const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+        const existingSheets = spreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
+        sheetExists = existingSheets.includes(sheetName);
+        
+        if (!sheetExists) {
+          console.log(`Creating new sheet by duplicating template: ${sheetName} (attempt ${attempts + 1})`);
+          
+          // Duplicate the template sheet (this creates and configures the sheet)
+          await duplicateTemplateSheet(sheets, spreadsheetId, sheetName);
+          
+          console.log(`Successfully created and configured sheet: ${sheetName}`);
+          
+          // Double-check that the sheet was created
+          const verifySpreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+          const verifySheets = verifySpreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
+          sheetExists = verifySheets.includes(sheetName);
+        }
+      } catch (error) {
+        attempts++;
+        console.log(`Sheet creation attempt ${attempts} failed:`, error);
+        
+        if (attempts < maxAttempts) {
+          // Wait a bit before retrying to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        } else {
+          throw error;
+        }
+      }
     }
 
-    // Add the stat to both the date-specific sheet and RAW STAT ENTRIES
-    const promises = [
-      // Also add to RAW STAT ENTRIES for cumulative tracking
-      sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: "RAW STAT ENTRIES!A:D",
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [[name, stat, timestamp, count]],
-        },
-      })
-    ];
+    // Add the stat to RAW STAT ENTRIES with retry logic
+    let results;
+    let appendAttempts = 0;
+    const maxAppendAttempts = 3;
 
-    const results = await Promise.all(promises);
+    while (appendAttempts < maxAppendAttempts) {
+      try {
+        results = await sheets.spreadsheets.values.append({
+          spreadsheetId,
+          range: "RAW STAT ENTRIES!A:D",
+          valueInputOption: "USER_ENTERED",
+          requestBody: {
+            values: [[name, stat, timestamp, count]],
+          },
+        });
+        break; // Success, exit retry loop
+      } catch (error) {
+        appendAttempts++;
+        console.log(`Append attempt ${appendAttempts} failed:`, error);
+        
+        if (appendAttempts < maxAppendAttempts) {
+          // Wait before retrying to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500 * appendAttempts));
+        } else {
+          throw error;
+        }
+      }
+    }
 
-    console.log("Successfully added to sheets:", results.map(r => r.data));
+    console.log("Successfully added to sheets:", results.data);
     return NextResponse.json({ 
       success: true, 
       message: "Stat added successfully",
       dateSheet: sheetName,
-      data: results[0].data 
+      data: results.data 
     });
 
   } catch (error) {
@@ -186,18 +223,57 @@ export async function POST(request: NextRequest) {
 
 // Helper function to set up a new sheet with formulas
 async function duplicateTemplateSheet(sheets: any, spreadsheetId: string, sheetName: string) {
+  // Check if sheet already exists (race condition protection)
+  try {
+    const checkSpreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const existingSheets = checkSpreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
+    
+    if (existingSheets.includes(sheetName)) {
+      console.log(`Sheet ${sheetName} already exists, skipping creation`);
+      return;
+    }
+  } catch (error) {
+    console.log("Could not check existing sheets, continuing with creation");
+  }
+
   // Get all sheets
   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
   const sheetsData = spreadsheet.data.sheets || [];
 
-  // Find your template sheet by title
+  // Find the most recent template sheet (look for sheets with date format like "9/27/2025")
   const templateSheet = sheetsData.find(
-    (s: any) => s.properties?.title === "9/27/2025" // <-- change this to your template sheet’s name
+    (s: any) => {
+      const title = s.properties?.title;
+      // Look for sheets that match date format (M/D/YYYY or MM/D/YYYY)
+      return title && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(title);
+    }
   );
 
   if (!templateSheet) {
-    throw new Error("Template sheet not found!");
+    // If no template sheet found, create a basic sheet
+    console.log("No template sheet found, creating basic sheet");
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: sheetName,
+                gridProperties: {
+                  rowCount: 1000,
+                  columnCount: 20
+                }
+              }
+            }
+          }
+        ]
+      }
+    });
+    return;
   }
+
+  console.log(`Using template sheet: ${templateSheet.properties.title}`);
 
   // Copy the template sheet
   const copyResponse = await sheets.spreadsheets.sheets.copyTo({
@@ -227,15 +303,50 @@ async function duplicateTemplateSheet(sheets: any, spreadsheetId: string, sheetN
     },
   });
 
-  
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${sheetName}!F22`,
-    valueInputOption: "RAW",
-    requestBody: {
-      values: [[sheetName]], // write the current sheet name / date directly
-    },
-  });
+  // Update the date in the sheet if there's a specific cell for it
+  try {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!F22`,
+      valueInputOption: "RAW",
+      requestBody: {
+        values: [[sheetName]], // write the current sheet name / date directly
+      },
+    });
+  } catch (error) {
+    console.log("Could not update F22 cell, continuing...");
+  }
+
+  // Clean up any "Copy of" sheets that might have been created
+  try {
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const allSheets = spreadsheet.data.sheets || [];
+    
+    const copySheets = allSheets.filter((sheet: any) => 
+      sheet.properties?.title?.startsWith("Copy of")
+    );
+    
+    if (copySheets.length > 0) {
+      console.log(`Found ${copySheets.length} "Copy of" sheets to delete`);
+      
+      const deleteRequests = copySheets.map((sheet: any) => ({
+        deleteSheet: {
+          sheetId: sheet.properties.sheetId
+        }
+      }));
+      
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: {
+          requests: deleteRequests
+        }
+      });
+      
+      console.log("Successfully deleted copy sheets");
+    }
+  } catch (error) {
+    console.log("Could not clean up copy sheets:", error);
+  }
 
   console.log(`Successfully duplicated template sheet and renamed to: ${sheetName}`);
 }

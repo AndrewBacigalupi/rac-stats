@@ -29,6 +29,7 @@ export default function StatEntryPage() {
       stat: string;
       timestamp: string;
     }>>([]);
+    const [statCounter, setStatCounter] = useState(0);
     const [toast, setToast] = useState<{
         message: string;
         type: "success" | "error";
@@ -158,6 +159,7 @@ export default function StatEntryPage() {
             ? playerDisplayName.split(': ')[0] 
             : playerDisplayName;
             
+        // Use client-side date generation to avoid hydration issues
         const now = new Date();
         const timestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
         
@@ -168,8 +170,10 @@ export default function StatEntryPage() {
             count: 1
         };
         
-        // Generate unique ID for this stat entry
-        const statId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        // Generate unique ID for this stat entry using counter
+        const currentCounter = statCounter + 1;
+        setStatCounter(currentCounter);
+        const statId = `stat-${currentCounter}-${Date.now()}`;
         
         // Add to pending stats immediately for visual feedback
         setPendingStats(prev => [...prev, {
