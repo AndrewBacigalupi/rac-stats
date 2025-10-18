@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add the stat to RAW STAT ENTRIES with retry logic
-    let results;
+    let results: any = null;
     let appendAttempts = 0;
     const maxAppendAttempts = 3;
 
@@ -201,6 +201,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!results) {
+      throw new Error("Failed to add stat after all retry attempts");
+    }
+
     console.log("Successfully added to sheets:", results.data);
     return NextResponse.json({ 
       success: true, 
@@ -226,7 +230,7 @@ async function duplicateTemplateSheet(sheets: any, spreadsheetId: string, sheetN
   // Check if sheet already exists (race condition protection)
   try {
     const checkSpreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const existingSheets = checkSpreadsheet.data.sheets?.map(sheet => sheet.properties?.title) || [];
+    const existingSheets = checkSpreadsheet.data.sheets?.map((sheet: any) => sheet.properties?.title) || [];
     
     if (existingSheets.includes(sheetName)) {
       console.log(`Sheet ${sheetName} already exists, skipping creation`);
