@@ -42,7 +42,12 @@ export default function ManagerDocsPage() {
 
                   <div>
                     <h3 className="font-semibold text-2xl mb-2">Step 2: Select Player</h3>
-                    <p>Click on the player's name button who performed the action you want to track.</p>
+                    <p className="text-lg">Click on the player's name button who performed the action you want to track.
+                      <br/>
+                      <span className="font-semibold text-xl">NEW MANAGERS:</span> BERNIE is Joshua BERNstein, GRIFF is Griffin, LIU is Theo Liu, and SID is Sidney Wooten. 
+                      These abbreviations are not totally consistent, but they more or less correspond to the way these guys 
+                      are referred to during practice, which I think makes it easier to track. 
+                    </p>
                   </div>
 
                   <div>

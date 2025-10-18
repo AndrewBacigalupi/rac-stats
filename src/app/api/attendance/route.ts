@@ -69,14 +69,17 @@ export async function POST(request: NextRequest) {
     const existingRows = existingPracticeData.data.values || [];
     const headerRow = existingRows[0] || [];
     // Skip the first row (headers) and second row (totals) when checking for existing dates
-    const existingDates = existingRows.slice(2).map(row => row[0]).filter(date => date);
+    const dataRows = existingRows.slice(2);
+    const existingDates = dataRows.map(row => row[0]).filter(date => date);
     
-    if (existingDates.includes(date)) {
-      return NextResponse.json(
-        { error: `❌ STOP: Attendance for ${date} has already been recorded! You cannot record attendance twice for the same practice date.` },
-        { status: 409 }
-      );
-    }
+    // Find the row index of existing date (if any)
+    const existingDateRowIndex = existingDates.findIndex(existingDate => existingDate === date);
+    const isOverwriting = existingDateRowIndex !== -1;
+    
+    console.log(`Attendance submission for date: ${date}`);
+    console.log(`Existing dates found: ${existingDates.join(', ')}`);
+    console.log(`Is overwriting existing entry: ${isOverwriting}`);
+    console.log(`Existing date row index: ${existingDateRowIndex}`);
 
     // Only record present players (we only care about total days attended)
     const presentPlayers = attendance.filter(record => record.present);
@@ -118,38 +121,71 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      // Update the totals row formulas to include the new row
+      // Update the totals row formulas to include all data rows
       const totalsRow = ["TOTALS"];
-      const lastRowNumber = existingRows.length + 1; // +1 because we're adding a new row
+      const dataRowCount = dataRows.length;
+      const startRow = 3; // Data starts at row 3 (after headers and totals)
+      const endRow = startRow + dataRowCount - 1; // Last data row
+      
+      uniquePlayers.forEach((playerName, index) => {
+        const columnLetter = String.fromCharCode(66 + index); // B, C, D, etc. (B = column 2)
+        if (dataRowCount > 0) {
+          totalsRow.push(`=SUM(${columnLetter}${startRow}:${columnLetter}${endRow})`);
+        } else {
+          totalsRow.push('');
+        }
+      });
       
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: "Attendance!A2",
-        valueInputOption: "RAW",
+        valueInputOption: "USER_ENTERED", // Use USER_ENTERED to allow formulas
         requestBody: {
           values: [totalsRow],
         },
       });
     }
 
-    // Add the practice record
-    const result = await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: "Attendance!A:Z",
-      valueInputOption: "RAW",
-      requestBody: {
-        values: [practiceRow],
-      },
-    });
-
-    console.log("Successfully recorded attendance:", result.data);
+    // Add or update the practice record
+    let result;
+    let message;
+    
+    if (isOverwriting) {
+      // Calculate the actual row number in the sheet (accounting for headers and totals row)
+      const actualRowNumber = existingDateRowIndex + 3; // +3 because: 1 (header) + 1 (totals) + 1 (0-based index to 1-based)
+      
+      result = await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `Attendance!A${actualRowNumber}:Z${actualRowNumber}`,
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [practiceRow],
+        },
+      });
+      
+      message = `Attendance updated for ${date}`;
+      console.log(`Successfully updated attendance for ${date} at row ${actualRowNumber}:`, result.data);
+    } else {
+      result = await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Attendance!A:Z",
+        valueInputOption: "RAW",
+        requestBody: {
+          values: [practiceRow],
+        },
+      });
+      
+      message = `Attendance recorded for ${date}`;
+      console.log("Successfully recorded new attendance:", result.data);
+    }
     
     return NextResponse.json({ 
       success: true, 
-      message: `Attendance recorded for ${date}`,
+      message: message,
       date: date,
       presentCount: presentPlayers.length,
       totalCount: attendance.length,
+      overwritten: isOverwriting,
       data: result.data 
     });
 

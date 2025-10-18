@@ -69,6 +69,7 @@ export default function AttendancePage() {
   };
 
   const submitAttendance = async () => {
+    console.log("Starting attendance submission...");
     setSubmitting(true);
     setMessage({ text: "", type: "" });
 
@@ -100,30 +101,29 @@ export default function AttendancePage() {
         }),
       });
 
+      console.log("Response status:", response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log("Success response:", result);
+        const messageText = result.overwritten 
+          ? `${result.message} (You can submit again to update attendance)`
+          : `${result.message} (You can submit again to update attendance)`;
+        
         setMessage({
-          text: `Attendance recorded for ${today}`,
+          text: messageText,
           type: "success"
         });
         
-        // Redirect back to track stats page after 2 seconds
-        setTimeout(() => {
-          router.push('/stat-entry');
-        }, 2000);
+        // Don't auto-redirect - let users submit multiple times
+        // Users can manually navigate back using the "Back to Track Stats" button
       } else {
         const error = await response.json();
-        if (response.status === 409) {
-          // Duplicate date error
-          setMessage({
-            text: `Attendance for ${today} has already been recorded`,
-            type: "error"
-          });
-        } else {
-          setMessage({
-            text: `Failed to record attendance: ${error.error}`,
-            type: "error"
-          });
-        }
+        console.log("Error response:", error);
+        setMessage({
+          text: `Failed to record attendance: ${error.error}`,
+          type: "error"
+        });
       }
     } catch (error) {
       console.error("Error submitting attendance:", error);
@@ -132,6 +132,7 @@ export default function AttendancePage() {
         type: "error"
       });
     } finally {
+      console.log("Setting submitting to false");
       setSubmitting(false);
     }
   };
@@ -264,6 +265,21 @@ export default function AttendancePage() {
               'Record Attendance'
             )}
           </Button>
+          
+          {/* Debug: Reset button if stuck */}
+          {submitting && (
+            <div className="mt-4">
+              <Button
+                onClick={() => {
+                  console.log("Manually resetting submitting state");
+                  setSubmitting(false);
+                }}
+                className="text-sm px-4 py-2 bg-red-500 text-white rounded"
+              >
+                Reset (if stuck)
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

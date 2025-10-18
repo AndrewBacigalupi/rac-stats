@@ -231,30 +231,17 @@ export default function StatEntryPage() {
 
             {/* Attendance Button */}
             <div className="mt-8 mb-8">
-              {attendanceTaken || attendanceLoading ? (
+              <Link href="/attendance" passHref>
                 <Button
-                  disabled={true}
-                  className="rounded-xl border border-solid border-transparent transition-all duration-300 flex items-center justify-center gap-2 font-medium text-lg h-16 px-8 shadow-lg mx-auto opacity-50 cursor-not-allowed"
+                  className="rounded-xl border border-solid border-transparent transition-all duration-300 flex items-center justify-center gap-2 font-medium text-lg h-16 px-8 shadow-lg mx-auto hover:opacity-80"
                    style={{
                      backgroundColor: "#ffffff",
                      color: "#000000",
                    }}
                 >
-                  {attendanceLoading ? "Loading..." : "Attendance Completed"}
+                  {attendanceTaken ? "Update Attendance" : "Take Attendance"}
                 </Button>
-              ) : (
-                <Link href="/attendance" passHref>
-                  <Button
-                    className="rounded-xl border border-solid border-transparent transition-all duration-300 flex items-center justify-center gap-2 font-medium text-lg h-16 px-8 shadow-lg mx-auto hover:opacity-80"
-                     style={{
-                       backgroundColor: "#ffffff",
-                       color: "#000000",
-                     }}
-                  >
-                    Take Attendance
-                  </Button>
-                </Link>
-              )}
+              </Link>
             </div>
 
             {/* Undo Last Entry Button */}
