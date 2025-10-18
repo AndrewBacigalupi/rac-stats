@@ -79,6 +79,8 @@ export async function GET() {
   } catch (error) {
     console.error("❌ Error testing Google Sheets connection:", error);
     console.error("Error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined
     });
     
     return NextResponse.json(
@@ -120,13 +122,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract date from timestamp (assuming timestamp is in format like "2025-09-28T10:30:00")
+    // Extract date from timestamp (format: "1/1/2025" - month/day/year)
     const date = new Date(timestamp);
     const dateString = date.toLocaleDateString('en-US', { 
       month: 'numeric', 
       day: 'numeric', 
       year: 'numeric' 
-    }); // Format: "9/28/2025"
+    }); // Format: "1/1/2025"
     
     console.log(`Processing stat for date: ${dateString}`);
 

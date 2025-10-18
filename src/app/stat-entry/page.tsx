@@ -23,6 +23,12 @@ export default function StatEntryPage() {
     } | null>(null);
     const [showUndoModal, setShowUndoModal] = useState(false);
     const [undoLoading, setUndoLoading] = useState(false);
+    const [pendingStats, setPendingStats] = useState<Array<{
+      id: string;
+      player: string;
+      stat: string;
+      timestamp: string;
+    }>>([]);
     const [toast, setToast] = useState<{
         message: string;
         type: "success" | "error";
@@ -101,24 +107,10 @@ export default function StatEntryPage() {
     };
 
     
-    const addStatEntry = async (playerDisplayName: string, statType: string) => {
-        // Extract just the player name (remove ": NUMBER" part)
-        const playerName = playerDisplayName.includes(': ') 
-            ? playerDisplayName.split(': ')[0] 
-            : playerDisplayName;
-            
-        const now = new Date();
-        const timestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
-        
-        const entry = {
-            name: playerName,
-            stat: statType,
-            timestamp: timestamp,
-            count: 1
-        };
-        
+    // Function to process stat entries in the background
+    const processStatEntry = async (entry: any, statId: string) => {
         try {
-            console.log("Sending entry:", entry);
+            console.log("Processing stat entry:", entry);
             
             const response = await fetch('/api/addStat', {
                 method: 'POST',
@@ -129,14 +121,10 @@ export default function StatEntryPage() {
                 body: JSON.stringify(entry),
             });
             
-            console.log("Response status:", response.status);
-            console.log("Response ok:", response.ok);
-            
             const result = await response.json();
-            console.log("Response data:", result);
             
             if (response.ok) {
-                showToast(`${playerDisplayName} ${statType} recorded`, "success");
+                console.log("Stat processed successfully:", result);
                 
                 // Refresh the last stat entry after adding a new one
                 setTimeout(async () => {
@@ -158,7 +146,44 @@ export default function StatEntryPage() {
         } catch (error) {
             console.error("Error calling API:", error);
             showToast("Error adding stat", "error");
+        } finally {
+            // Remove from pending stats
+            setPendingStats(prev => prev.filter(stat => stat.id !== statId));
         }
+    };
+
+    const addStatEntry = (playerDisplayName: string, statType: string) => {
+        // Extract just the player name (remove ": NUMBER" part)
+        const playerName = playerDisplayName.includes(': ') 
+            ? playerDisplayName.split(': ')[0] 
+            : playerDisplayName;
+            
+        const now = new Date();
+        const timestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
+        
+        const entry = {
+            name: playerName,
+            stat: statType,
+            timestamp: timestamp,
+            count: 1
+        };
+        
+        // Generate unique ID for this stat entry
+        const statId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Add to pending stats immediately for visual feedback
+        setPendingStats(prev => [...prev, {
+            id: statId,
+            player: playerDisplayName,
+            stat: statType,
+            timestamp: timestamp
+        }]);
+        
+        // Show immediate feedback
+        showToast(`${playerDisplayName} ${statType} recorded`, "success");
+        
+        // Process the stat entry in the background (non-blocking)
+        processStatEntry(entry, statId);
         
         setSelectedPlayer(null);
     };
@@ -228,6 +253,18 @@ export default function StatEntryPage() {
                  Tufts Men's Basketball
                </h1>
             </div>
+
+            {/* Pending Stats Indicator */}
+            {pendingStats.length > 0 && (
+              <div className="mt-4 mb-4 text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 text-yellow-200 rounded-lg">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-200 border-t-transparent"></div>
+                  <span className="text-sm">
+                    Processing {pendingStats.length} stat{pendingStats.length > 1 ? 's' : ''}...
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Attendance Button */}
             <div className="mt-8 mb-8">
