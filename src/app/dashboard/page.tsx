@@ -42,10 +42,10 @@ export default function Dashboard() {
         <div className="mt-8 h-auto flex gap-4 whitespace-normal items-center justify-center flex-col sm:flex-row">
           <Link href="/manager-docs" passHref>
             <Button
-              className="rounded-xl max-w-[90vw] sm:max-w-none border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-auto py-3 px-6 shadow-lg hover:shadow-xl hover:opacity-80 text-center leading-tight"
+              className="rounded-xl  sm:max-w-none border-2 transition-all duration-300 flex items-center justify-center font-medium text-sm h-auto py-3 px-6 shadow-lg hover:shadow-xl hover:opacity-80 text-center leading-tight"
               style={{backgroundColor: 'transparent', color: '#ffffff', borderColor: '#2f9ffa'}}
             >
-              <span className="block sm:inline">
+              <span className="block text-lg sm:inline">
                 <span className="block sm:inline">MANAGERS/COACHES:</span>
                 <span className="block sm:inline sm:ml-1">PLEASE READ BEFORE TRACKING STATS</span>
               </span>
