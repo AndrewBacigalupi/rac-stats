@@ -121,29 +121,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      // Update the totals row formulas to include all data rows
-      const totalsRow = ["TOTALS"];
-      const dataRowCount = dataRows.length;
-      const startRow = 3; // Data starts at row 3 (after headers and totals)
-      const endRow = startRow + dataRowCount - 1; // Last data row
-      
-      uniquePlayers.forEach((playerName, index) => {
-        const columnLetter = String.fromCharCode(66 + index); // B, C, D, etc. (B = column 2)
-        if (dataRowCount > 0) {
-          totalsRow.push(`=SUM(${columnLetter}${startRow}:${columnLetter}${endRow})`);
-        } else {
-          totalsRow.push('');
-        }
-      });
-      
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: "Attendance!A2",
-        valueInputOption: "USER_ENTERED", // Use USER_ENTERED to allow formulas
-        requestBody: {
-          values: [totalsRow],
-        },
-      });
+      // Do not modify the totals row; user will manage totals manually
     }
 
     // Add or update the practice record
