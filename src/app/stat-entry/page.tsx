@@ -97,7 +97,7 @@ export default function StatEntryPage() {
       );
     }
 
-    const stats = ["3PMAKE", "3PMISS", "OREB", "DREB", "ASSIST", "TO"];
+    const stats = ["3PMAKE", "3PMISS", "OREB", "DREB", "ASSIST", "TO", "DEFL"];
 
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type, isVisible: true });
